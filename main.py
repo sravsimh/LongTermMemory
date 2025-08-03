@@ -17,7 +17,7 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key={GEMINI_API_KEY}"
 
 # Or use os.getenv("OPENAI_API_KEY")
-OPENAI_API_KEY = "Your-API-KEY"
+OPENAI_API_KEY = "your-api-key"
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 # --- Helper function to call Gemini API ---
@@ -26,13 +26,19 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 def call_openai_api(prompt, is_json=False):
     """Sends a prompt to OpenAI's API and returns the response."""
     try:
-        response = client.responses.create(
-            model="gpt-4o-mini",
-            input=prompt,
-            text={"format": {"type": "json_object"}}
-        )
+        kwargs = {
+            "model": "gpt-4o-mini",
+            "input": prompt
+        }
+
+        # Only include text format if JSON is requested
+        if is_json:
+            kwargs["text"] = {"format": {"type": "json_object"}}
+
+        response = client.responses.create(**kwargs)
 
         return response.output[0].content[0].text
+
     except Exception as e:
         return f"OpenAI API error: {e}"
 
@@ -91,24 +97,24 @@ def handle_user_message(user_id, user_message_text):
     - "memoryToForget": a list of strings, each describing the specific memory content to be forgotten (or an empty list if none)
 
     Examples:
-    - Input: "I don't use Brave anymore"  
+    - Input: "I don't use Brave anymore"
     Output: {{ "shouldDelete": true, "memoryToForget": ["Brave"] }}
 
-    - Input: "Replace Jira with Linear for project tracking"  
-    Output: {{ "shouldDelete": true, "memoryToForget": ["Jira for project tracking"] }}
+    - Input: "Replace Jira with Linear for project tracking"
+    Output: {{ "shouldDelete": true, "memoryToForget": [
+        "Jira for project tracking"] }}
 
-    - Input: "I still use Notion every day"  
+    - Input: "I still use Notion every day"
     Output: {{ "shouldDelete": false, "memoryToForget": [] }}
 
     Only return the JSON. Do not include any explanation or additional text.
     """
 
-    deletion_response_text = call_gemini_api(deletion_prompt, is_json=True)
+    deletion_response_text = call_openai_api(deletion_prompt, is_json=True)
     try:
         deletion_response = json.loads(deletion_response_text)
         if deletion_response.get("shouldDelete") and isinstance(deletion_response.get("memoryToForget"), list):
             subject_to_forget = deletion_response["memoryToForget"]
-            print(subject_to_forget)
             vectors = createEmbeddings(subject_to_forget)
             for i, vec in enumerate(vectors):
                 searchResults = searchQdrant(user_id, vec, True)
@@ -137,7 +143,6 @@ def handle_user_message(user_id, user_message_text):
         Make sure not to mix multiple things into one memory listItem; each should contain only one entity.
     """
     creation_response_text = call_openai_api(creation_prompt, is_json=True)
-    print(creation_response_text)
     try:
         creation_response = json.loads(creation_response_text)
         if creation_response.get("shouldRemember") and isinstance(creation_response.get("memory"), list):
@@ -162,23 +167,24 @@ def handle_user_message(user_id, user_message_text):
 
     casual_prompt_text = f'''
     Analyse the use prompt and tell if its a casual promt or a prompt which requires knowledge or the data regarding the user,
-    message: {user_message_text} and return {{"requiresMemory":True}} else {{"requiresMemory":False}}  and make sure the T and F are caps as im using python
+    message: {user_message_text} and return output in json format like {{"requiresMemory":True}} else {{"requiresMemory":False}}  and make sure the T and F are caps as im using python
     '''
-    casual_prompt_text_response = call_gemini_api(
+    casual_prompt_text_response = call_openai_api(
         casual_prompt_text, is_json=True)
 
     try:
+
         casual_response = json.loads(casual_prompt_text_response)
+
         if casual_response.get("requiresMemory"):
 
             # 3. Generate a response using context and memories
             res = searchQdrant(user_id, createEmbeddings(
                 user_message_text)[0])
             indexedMatches = []
-            for i in res:
-                indexedMatches.append(i.payload["content"])
-
-            if len(indexedMatches) != 0:
+            if len(res) > 0:
+                for i in res:
+                    indexedMatches.append(i.payload["content"])
                 memories_context = "Here are some things I know about the user:\n- " + \
                     "\n- ".join(indexedMatches)
             else:
@@ -186,15 +192,15 @@ def handle_user_message(user_id, user_message_text):
 
             response_prompt = f"""
                 You are a helpful assistant with a long-term memory with add to memory and delete from memory capabilities. the below is your current memory fetch with Semantic search of the user message.
-                {indexedMatches}
+                {memories_context}
                 Based on this context and our current conversation, provide a helpful and relevant response to the user's latest message.
                 User's message: "{user_message_text}"
             """
-            final_response = call_gemini_api(response_prompt)
+            final_response = call_openai_api(response_prompt)
 
             return final_response
         else:
-            final_response = call_gemini_api(user_message_text)
+            final_response = call_openai_api(user_message_text)
 
             return final_response
     except Exception as e:

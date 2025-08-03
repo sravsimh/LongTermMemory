@@ -1,14 +1,15 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import time
-# from vector_embeddings import createQdrant, addToQdrant, searchQdrant
+import torch
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 def createEmbeddings(data):
     try:
-        model = SentenceTransformer('all-MiniLM-L6-v2', device='cuda')
+        model = SentenceTransformer(
+            'all-MiniLM-L6-v2', device='cuda' if torch.cuda.is_available() else 'cpu')
         model.encode(['warminggu'], convert_to_numpy=True)
 
         batchSize = 50

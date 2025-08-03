@@ -1,11 +1,6 @@
-import time
-import numpy as np
-from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
-from qdrant_client.models import PointStruct
 from qdrant_client.models import Filter, FieldCondition, MatchValue, PointIdsList
-from transformer import createEmbeddings
 
 
 client = QdrantClient(url="http://localhost:6333")
@@ -64,7 +59,7 @@ def searchQdrant(user_id, vector, isVectorRequired=False):
         return filtered_results
     except Exception as e:
         print("error searching:", e)
-        return None
+        return e
 
 
 def deleteQdrant(user_id, point_id):
