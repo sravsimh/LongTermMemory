@@ -9,6 +9,14 @@ score_threshold = 0.35
 
 
 def createQdrant(user_id):
+    """creates Qdrant collection if it does not exists with the collection name {user_id}
+
+    input-
+    user_id: str
+
+    return-
+    Bool - true if successful else None
+    """
     try:
         client.get_collection(user_id)
         print("collection already exists")
@@ -27,7 +35,14 @@ def createQdrant(user_id):
 
 
 def addToQdrant(user_id, data):
-    # payload contains the status and vector contains the embeddings
+    """adds values to exsisting Qdrant DB
+    take in 2 args:
+    user_id: str
+    data: dict containing "payload" and "vector" key and value pairs
+
+    returns:
+    True if added successfully else None
+    """
     try:
         requestss = client.upload_collection(
             collection_name=user_id,
@@ -42,6 +57,18 @@ def addToQdrant(user_id, data):
 
 
 def searchQdrant(user_id, vector, isVectorRequired=False):
+    """
+    this searched the Qdrant Db for the given vector
+
+    input:
+    user_id: str
+    vector: list['floats']
+    isVectorRequired: Bool (default to false)
+
+    Output:
+    filtered_results: list['object']
+    if isVectorRequired is True then return the vector value in the object
+    """
     try:
         search_result = client.query_points(
             collection_name=user_id,
@@ -63,6 +90,16 @@ def searchQdrant(user_id, vector, isVectorRequired=False):
 
 
 def deleteQdrant(user_id, point_id):
+    """
+    sets the payload of the given point_id
+
+    input-
+    user_id: str
+    point_id: str
+
+    return-
+    Bool - true if successful else None
+    """
     try:
         delete_qdrant = client.set_payload(
             collection_name=user_id,
