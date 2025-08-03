@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 import numpy as np
 import time
-from vector_embeddings import createQdrant, addToQdrant, searchQdrant
+# from vector_embeddings import createQdrant, addToQdrant, searchQdrant
 import warnings
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -19,11 +19,11 @@ def createEmbeddings(data):
             batch = data[i:i+batchSize]
             emb = model.encode(batch, convert_to_numpy=True).astype('float32')
             allEmbeds.append(emb)
-            print(
-                f"Encoded batch {i//batchSize + 1} / {len(data)//batchSize + 1}")
+            # print(
+            #     f"Encoded batch {i//batchSize + 1} / {len(data)//batchSize + 1}")
 
         embeddings = np.vstack(allEmbeds)
-        print(f"Done encoding in {time.time() - startTime:.2f}s")
+        # print(f"Done encoding in {time.time() - startTime:.2f}s")
         return embeddings
     except Exception as e:
         print("error creating embedding", e)

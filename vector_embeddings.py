@@ -4,10 +4,13 @@ from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, VectorParams
 from qdrant_client.models import PointStruct
-from qdrant_client.models import Filter, FieldCondition, MatchValue
+from qdrant_client.models import Filter, FieldCondition, MatchValue, PointIdsList
+from transformer import createEmbeddings
 
 
 client = QdrantClient(url="http://localhost:6333")
+
+score_threshold = 0.35
 
 
 def createQdrant(user_id):
@@ -43,7 +46,7 @@ def addToQdrant(user_id, data):
         return None
 
 
-def searchQdrant(user_id, vector):
+def searchQdrant(user_id, vector, isVectorRequired=False):
     try:
         search_result = client.query_points(
             collection_name=user_id,
@@ -52,41 +55,29 @@ def searchQdrant(user_id, vector):
                 must=[FieldCondition(
                     key="status", match=MatchValue(value="True"))]
             ),
+            with_vectors=isVectorRequired,
             with_payload=True,
             limit=5,
         ).points
-        return search_result
+        filtered_results = [
+            res for res in search_result if res.score >= score_threshold]
+        return filtered_results
     except Exception as e:
         print("error searching:", e)
         return None
 
 
-def deleteQdrant(user_id, vector):
+def deleteQdrant(user_id, point_id):
     try:
         delete_qdrant = client.set_payload(
             collection_name=user_id,
-            payload=[{
+            payload={
                 "status": "deleted"
-            }],
-            points=vector
+            },
+            points=PointIdsList(points=[point_id])
         )
         print("Deleted payload successfully")
         return True
     except Exception as e:
         print("vector could not be deleted:", e)
         return None
-
-
-# # code to view collections in console
-# scroll_result, next_page = client.scroll(
-#     collection_name="test",
-#     with_payload=True,
-#     with_vectors=True,
-#     limit=100  # Adjust this as needed
-# )
-
-# for point in scroll_result:
-#     print(f"ID: {point.id}")
-#     print(f"Vector: {point.vector}")
-#     print(f"Payload: {point.payload}")
-#     print("-" * 30)
