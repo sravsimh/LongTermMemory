@@ -7,6 +7,16 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 def createEmbeddings(data):
+    """
+    this creates vector embedding of the input data
+
+    input-
+    data: list['str']
+
+    return-
+    embeddigns: list[list['floats']]
+    """
+
     try:
         model = SentenceTransformer(
             'all-MiniLM-L6-v2', device='cuda' if torch.cuda.is_available() else 'cpu')
